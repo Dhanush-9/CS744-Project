@@ -6,5 +6,8 @@ build/
 *.exe
 *.out
 
+*.csv
+
+
 
 

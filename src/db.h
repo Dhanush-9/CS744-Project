@@ -5,7 +5,7 @@ using namespace std;
 
 class DB {
 public:
-    DB(const string &host, const string &user, const string &pass, const string &dbname, int poolSize = 10);
+    DB(const string &host, const string &user, const string &pass, const string &dbname, int poolSize = 24);
     ~DB();
 
     bool get(int key, string &value);

@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <list>
 #include <string>
+#include <shared_mutex>
 #include <mutex>
 
 using namespace std;
@@ -12,7 +13,7 @@ private:
     unordered_map<int, list<pair<int, string>>::iterator> cacheMap;
     long long hit = 0;
     long long miss = 0;
-    mutable mutex mtx;
+    mutable shared_mutex mtx;
 
 public:
     explicit LRU(int cap);

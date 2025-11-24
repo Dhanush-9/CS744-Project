@@ -11,7 +11,7 @@ KVServer::KVServer(const string &dbHost,const string &dbUser,const string &dbPas
       db(dbHost, dbUser, dbPass, dbName)
 {
     int threads = thread::hardware_concurrency();
-    if (threads == 0) threads = 4;
+    if (threads == 0) threads = 12;
     srv->new_task_queue = [threads] {
         return new ThreadPool(threads);
     };
@@ -41,6 +41,7 @@ KVServer::KVServer(const string &dbHost,const string &dbUser,const string &dbPas
             res.set_content("Failed to store key " + to_string(key) + "\n", "text/plain");
             return;
         }
+        dbWrites++;
 
         res.status = 200;
         res.set_content("Created key " + to_string(key) + "\n", "text/plain");
@@ -65,6 +66,7 @@ KVServer::KVServer(const string &dbHost,const string &dbUser,const string &dbPas
         string value;
 
         if (cache.get(key, value)) {
+            cacheHits++;
             res.set_content("Cache HIT: " + value + "\n", "text/plain");
             return;
         }
@@ -74,7 +76,8 @@ KVServer::KVServer(const string &dbHost,const string &dbUser,const string &dbPas
             res.set_content("Key not found\n", "text/plain");
             return;
         }
-
+        cacheMisses++;
+        dbReads++;
         cache.put(key, value);
         res.status = 200;
         res.set_content("Cache MISS -> DB: " + value + "\n", "text/plain");
@@ -99,6 +102,7 @@ KVServer::KVServer(const string &dbHost,const string &dbUser,const string &dbPas
 
         bool dbStatus = db.del(key);
         cache.del(key); 
+        dbWrites++;
 
         if (!dbStatus) {
             res.status = 404;
@@ -107,6 +111,17 @@ KVServer::KVServer(const string &dbHost,const string &dbUser,const string &dbPas
         }
         res.status = 200;
         res.set_content("Deleted key " + to_string(key) + "\n", "text/plain");
+    });
+
+    srv->Get("/metrics", [this](const Request &req, Response &res) {
+        string metrics;
+        metrics += "cache_hits :" + to_string(cacheHits.load()) + "\n";
+        metrics += "cache_misses :" + to_string(cacheMisses.load()) + "\n";
+        metrics += "db_reads :" + to_string(dbReads.load()) + "\n";
+        metrics += "db_writes :" + to_string(dbWrites.load()) + "\n";
+
+        res.status = 200;
+        res.set_content(metrics, "text/plain");
     });
 }
 

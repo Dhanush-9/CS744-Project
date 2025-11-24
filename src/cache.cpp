@@ -1,27 +1,29 @@
 #include "cache.h"
 #include <iostream>
 
+
 using namespace std;
 
 LRU :: LRU (int cap) : capacity(cap) {}
 
 bool LRU :: get(int key, string &value){
-    lock_guard<mutex> lock(mtx);
-
-    auto it = cacheMap.find(key);
-    if(it == cacheMap.end()){
-        //miss++;
-        return false;
+    {
+        shared_lock<shared_mutex> lock(mtx);
+        auto it = cacheMap.find(key);
+        if (it == cacheMap.end()) return false;
+        value = it->second->second; // safe read
     }
-
-    value = it->second->second;
-    cacheList.splice(cacheList.begin(), cacheList, it->second);
-    //hit++;
+    {
+        unique_lock<shared_mutex> ulock(mtx);
+        auto it = cacheMap.find(key);
+        if (it == cacheMap.end()) return false; // re-check
+        cacheList.splice(cacheList.begin(), cacheList, it->second);
+    }
     return true;
 }
 
 bool LRU :: put(int key, const string &value){
-    lock_guard<mutex> lock(mtx);
+    unique_lock<shared_mutex> lock(mtx); 
     try{
         auto it = cacheMap.find(key);
 
@@ -50,7 +52,7 @@ bool LRU :: put(int key, const string &value){
 }
 
 bool LRU :: del(int key){
-    lock_guard<mutex> lock(mtx);
+    unique_lock<shared_mutex> lock(mtx); 
     //key not found
     auto it = cacheMap.find(key);
     if(it == cacheMap.end()){
@@ -63,7 +65,7 @@ bool LRU :: del(int key){
 
 
 void LRU :: display() const {
-    lock_guard<mutex> lock(mtx);
+    shared_lock<shared_mutex> lock(mtx);
     cout << "Cache contents: ";
     for(auto &p : cacheList){
         cout << "(" << p.first << ":" << p.second << ") ";

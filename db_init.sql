@@ -1,0 +1,5 @@
+USE kvdb;
+CREATE TABLE IF NOT EXISTS kvtable (
+  k INT PRIMARY KEY,
+  v TEXT NOT NULL
+);

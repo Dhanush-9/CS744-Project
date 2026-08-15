@@ -1,0 +1,33 @@
+services:
+  kv_mysql:
+    image: mysql:8.0
+    container_name: kv_mysql
+    cpuset: "2"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: kvdb
+      MYSQL_USER: kvuser
+      MYSQL_PASSWORD: kvpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -ukvuser -pkvpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kv_server:
+    build: .
+    cpuset: "0,1"
+    container_name: kv_server
+    depends_on:
+      kv_mysql:
+        condition: service_healthy
+    environment:
+      - KV_DB_HOST=kv_mysql
+      - KV_DB_USER=kvuser
+      - KV_DB_PASS=kvpass
+    ports:
+      - "8080:8080"

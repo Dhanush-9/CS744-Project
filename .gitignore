@@ -5,9 +5,9 @@ build/
 #ignore files
 *.exe
 *.out
-
 *.csv
-
+*.o
+loadgen
 
 
 
